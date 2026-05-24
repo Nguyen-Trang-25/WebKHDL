@@ -1,0 +1,6 @@
+# Bỏ qua thư mục chứa mô hình
+models/
+
+# Bỏ qua các tệp trọng số/mô hình
+*.pkl
+*.keras
