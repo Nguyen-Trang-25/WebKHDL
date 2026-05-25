@@ -20,12 +20,17 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // ==========================================
-  // 2. LOGIC PREVIEW ẢNH CHO TAB ĐỐI CHỨNG
+  // 2. LOGIC PREVIEW ẢNH KHI NGƯỜI DÙNG CHỌN FILE
   // ==========================================
+  const singleFileInput = document.getElementById("single-file");
   const compareFileInput = document.getElementById("compare-file");
 
+  singleFileInput.addEventListener("change", function () {
+    handleFilePreview(this, "single-view");
+  });
+
   compareFileInput.addEventListener("change", function () {
-    // Nhân bản ảnh hiển thị ở cả 2 ô của 2 mô hình
+    // Đối với tab đối chứng, nhân bản ảnh hiển thị ở cả 2 ô của 2 mô hình
     handleFilePreview(this, "compare-view-cnn");
     handleFilePreview(this, "compare-view-rf");
   });
@@ -42,7 +47,52 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ==========================================
-  // 3. GỌI API BACKEND - ĐỐI CHỨNG SONG SONG
+  // 3. GỌI API BACKEND - NHẬN DIỆN ĐƠN LẺ
+  // ==========================================
+  const btnPredictSingle = document.getElementById("btn-predict-single");
+
+  btnPredictSingle.addEventListener("click", function () {
+    if (!singleFileInput.files[0]) {
+      alert("Vui lòng nạp file ảnh hoa lan lên hệ thống trước!");
+      return;
+    }
+
+    const modelSelect = document.getElementById("model-select").value;
+    const resultsWrapper = document.getElementById("single-results");
+    const resClass = document.getElementById("res-class");
+
+    // Giao diện chuyển sang trạng thái xử lý tính toán
+    resClass.innerText = "Đang trích xuất...";
+    resultsWrapper.classList.remove("hidden");
+
+    const formData = new FormData();
+    formData.append("file", singleFileInput.files[0]);
+    formData.append("model", modelSelect);
+
+    // Gọi API bất đồng bộ đến endpoint của Flask
+    fetch("/predict_single", {
+      method: "POST",
+      body: formData,
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+        // Điền dữ liệu trả về từ Server vào giao diện
+        resClass.innerText = data.class_name;
+        document.getElementById("res-conf").innerText = data.confidence;
+        document.getElementById("res-time").innerText = data.time;
+      })
+      .catch((err) => {
+        alert("Lỗi kết nối đến Server máy chủ Backend!");
+        console.error(err);
+      });
+  });
+
+  // ==========================================
+  // 4. GỌI API BACKEND - ĐỐI CHỨNG SONG SONG
   // ==========================================
   const btnCompare = document.getElementById("btn-compare");
 

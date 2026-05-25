@@ -1,5 +1,7 @@
 print("[1/5] Đang khởi động tiến trình...")
 import os
+import time
+import json
 
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -11,6 +13,7 @@ import numpy as np
 import joblib
 
 print("[3/5] Đang nạp TensorFlow/Keras...")
+import tensorflow as tf
 from keras.models import load_model
 
 from flask import Flask, render_template, request, jsonify
@@ -26,6 +29,39 @@ except ImportError:
 
 print("[4/5] Khởi tạo ứng dụng Flask Web...")
 app = Flask(__name__)
+
+# Summary metrics shown on the report tab.
+METRICS_PATH = "models/metrics.json"
+METRICS_DEFAULT = {
+    "rf": {
+        "best_val": "90.96%",
+        "test_acc": "91.68%",
+        "macro_f1": "0.92",
+    },
+    "cnn": {
+        "best_val": None,
+        "test_acc": "92.68%",
+        "macro_f1": "0.93",
+    },
+}
+
+
+def load_metrics():
+    metrics = {
+        "rf": METRICS_DEFAULT["rf"].copy(),
+        "cnn": METRICS_DEFAULT["cnn"].copy(),
+    }
+    if not os.path.exists(METRICS_PATH):
+        return metrics
+    try:
+        with open(METRICS_PATH, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        for key in ("rf", "cnn"):
+            if isinstance(data.get(key), dict):
+                metrics[key].update(data[key])
+    except Exception as exc:
+        print(f"[Warning] Cannot load metrics file: {exc}")
+    return metrics
 
 
 def extract_color_histogram(image_bgr, bins=(8, 8, 8)):
@@ -147,7 +183,65 @@ print("=========================")
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    metrics = load_metrics()
+    return render_template('index.html', metrics=metrics)
+
+
+@app.route('/predict_single', methods=['POST'])
+def predict_single():
+    if 'file' not in request.files:
+        return jsonify({'error': 'Không tìm thấy file ảnh gửi lên'}), 400
+
+    file = request.files['file']
+    model_type = request.form.get('model', 'cnn')
+
+    if file.filename == '':
+        return jsonify({'error': 'Chưa có ảnh nào được chọn'}), 400
+
+    try:
+        img_pil = Image.open(file.stream).convert('RGB')
+        img_np = np.array(img_pil)
+        img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+
+        start_time = time.time()
+
+        if model_type == 'cnn':
+            if cnn_model is None:
+                return jsonify({'error': 'Mô hình CNN chưa được nạp trên server'}), 500
+
+            img_resized = cv2.resize(img_bgr, (224, 224))
+            img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
+
+            img_tensor = np.expand_dims(img_rgb, axis=0).astype(np.float32)
+
+            preds = cnn_model.predict(img_tensor)
+            class_idx = int(np.argmax(preds[0]))
+
+            confidence = float(preds[0][class_idx]) * 100
+            predicted_class = CLASS_NAMES[class_idx]
+
+        else:
+            if rf_pipeline is None:
+                return jsonify({'error': 'Mô hình Random Forest chưa được nạp trên server'}), 500
+
+            rf_features = extract_all_features(img_bgr, 128)
+
+            preds_proba = rf_pipeline.predict_proba([rf_features])
+            class_idx = int(np.argmax(preds_proba[0]))
+
+            confidence = float(preds_proba[0][class_idx]) * 100
+            predicted_class = CLASS_NAMES[class_idx]
+
+        inference_time = (time.time() - start_time) * 1000
+
+        return jsonify({
+            'class_name': predicted_class,
+            'confidence': f"{confidence:.2f} %",
+            'time': f"{inference_time:.1f} ms"
+        })
+
+    except Exception as e:
+        return jsonify({'error': f"Lỗi hệ thống trong quá trình xử lý: {str(e)}"}), 500
 
 
 @app.route('/predict_compare', methods=['POST'])

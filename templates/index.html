@@ -19,7 +19,10 @@
         </div>
       </div>
       <nav class="nav-tabs">
-        <button class="tab-btn active" data-tab="tab-compare">
+        <button class="tab-btn active" data-tab="tab-single">
+          🔍 Nhận diện đơn lẻ
+        </button>
+        <button class="tab-btn" data-tab="tab-compare">
           📊 Đối chứng song song
         </button>
       </nav>
@@ -31,7 +34,73 @@
 
     <main class="main-content">
       <div class="container">
-        <section id="tab-compare" class="tab-panel active">
+        <section id="tab-single" class="tab-panel active">
+          <header class="content-header">
+            <h1>Hệ Thống Trích Xuất & Phân Loại</h1>
+            <p>
+              Hỗ trợ phân tích đặc trưng hình thái dựa trên ảnh tải lên theo
+              thời gian thực.
+            </p>
+          </header>
+
+          <div class="dashboard-grid">
+            <div class="card">
+              <h3 class="card-title">Cấu hình đầu vào</h3>
+              <div class="form-group">
+                <label for="model-select"
+                  >Kiến trúc thuật toán phân loại:</label
+                >
+                <select id="model-select">
+                  <option value="cnn">Mạng Tích Chập Học Sâu (CNN)</option>
+                  <option value="rf">
+                    Random Forest Classifier (Handcrafted Features)
+                  </option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Dữ liệu ảnh mẫu:</label>
+                <div
+                  class="upload-dropzone"
+                  onclick="document.getElementById('single-file').click()"
+                >
+                  <span class="upload-icon">📥</span>
+                  <p>Nhấp vào đây để chọn file ảnh</p>
+                  <input type="file" id="single-file" accept="image/*" hidden />
+                </div>
+              </div>
+              <button class="btn btn-primary" id="btn-predict-single">
+                🚀 Thực hiện phân loại
+              </button>
+            </div>
+
+            <div class="card">
+              <h3 class="card-title">Thông số phân tích</h3>
+              <div class="preview-box" id="single-view">
+                <div class="placeholder-text">Đang đợi nạp dữ liệu ảnh...</div>
+              </div>
+              <div id="single-results" class="results-wrapper hidden">
+                <div class="result-item">
+                  <span class="result-label">Loài hoa nhận diện:</span>
+                  <span class="result-value badge-green" id="res-class"
+                    >--</span
+                  >
+                </div>
+                <div class="result-item">
+                  <span class="result-label">Độ tự tin (Confidence):</span>
+                  <span class="result-value text-highlight" id="res-conf"
+                    >--</span
+                  >
+                </div>
+                <div class="result-item">
+                  <span class="result-label">Thời gian tính toán:</span>
+                  <span class="result-value" id="res-time">--</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-compare" class="tab-panel">
           <header class="content-header">
             <h1>Kiểm Thử Đối Chứng Đồng Thời (A/B Testing)</h1>
             <p>
