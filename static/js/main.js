@@ -1,25 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
   // ==========================================
-  // 1. LOGIC CHUYỂN TAB TỰ ĐỘNG
-  // ==========================================
-  const tabButtons = document.querySelectorAll(".tab-btn");
-  const tabPanels = document.querySelectorAll(".tab-panel");
-
-  tabButtons.forEach((button) => {
-    button.addEventListener("click", function () {
-      const targetTab = this.getAttribute("data-tab");
-
-      // Loại bỏ class active cũ
-      tabButtons.forEach((btn) => btn.classList.remove("active"));
-      tabPanels.forEach((panel) => panel.classList.remove("active"));
-
-      // Kích hoạt class active mới
-      this.classList.add("active");
-      document.getElementById(targetTab).classList.add("active");
-    });
-  });
-
-  // ==========================================
   // 2. LOGIC PREVIEW ẢNH KHI NGƯỜI DÙNG CHỌN FILE
   // ==========================================
   const singleFileInput = document.getElementById("single-file");
@@ -140,4 +120,63 @@ document.addEventListener("DOMContentLoaded", function () {
         console.error(err);
       });
   });
+
+  // ==========================================
+  // 5. LOGIC MENU BAR BÊN TRÁI TƯƠNG ỨNG VỚI TỪNG PHẦN
+  // ==========================================
+  const menuLinks = document.querySelectorAll("a[href^='#']");
+
+  if (menuLinks.length > 0) {
+    // 5.1. Cuộn mượt (Smooth Scroll) khi nhấn vào menu
+    menuLinks.forEach((link) => {
+      link.addEventListener("click", function (e) {
+        const targetId = this.getAttribute("href");
+        if (targetId === "#" || targetId === "") return;
+
+        try {
+          const targetElement = document.querySelector(targetId);
+          if (targetElement) {
+            e.preventDefault();
+            targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+          } else {
+            console.warn(`Lỗi: Không tìm thấy vùng nội dung nào có id="${targetId.replace('#', '')}" trên Web.`);
+          }
+        } catch (error) {
+          console.error("Lỗi khi cuộn trang:", error);
+        }
+      });
+    });
+
+    // 5.2. Đổi màu (Highlight) menu khi cuộn tới vùng tương ứng (Scroll Spy)
+    // Giải pháp: Dùng rootMargin thay cho threshold để bắt dính cả những section quá dài
+    const observerOptions = {
+      root: null, 
+      rootMargin: "-20% 0px -70% 0px", // Trigger active khi vùng nội dung chạm tới 20% từ trên cùng màn hình
+      threshold: 0 
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          menuLinks.forEach((link) => link.classList.remove("active"));
+          try {
+            const activeLink = document.querySelector(`a[href="#${entry.target.id}"]`);
+            if (activeLink) activeLink.classList.add("active");
+          } catch (e) {}
+        }
+      });
+    }, observerOptions);
+
+    menuLinks.forEach((link) => {
+      const targetId = link.getAttribute("href");
+      if (targetId !== "#" && targetId !== "") {
+        try {
+          const targetElement = document.querySelector(targetId);
+          if (targetElement) observer.observe(targetElement);
+        } catch (e) {}
+      }
+    });
+  } else {
+    console.warn("Lỗi giao diện: Không tìm thấy thẻ <a> nào ở Menubar có href bắt đầu bằng dấu '#' để chạy logic.");
+  }
 });
